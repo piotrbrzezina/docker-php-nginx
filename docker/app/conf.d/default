@@ -1,0 +1,37 @@
+server {
+    listen 80 default_server;
+
+
+    # Resource limits
+    client_max_body_size 50M;
+
+    # Path to public PHP files
+    root /srv/app/web;
+    index app.php;
+
+    # Remove default front controller from URL
+    if ($request_uri ~* "^(.*/)app\.php(/?)(.*)$") {
+        return 301 $1$3;
+    }
+
+    # Use default front controller if file not exists
+    location / {
+        try_files $uri /app.php$is_args$args;
+    }
+
+    # Process front controllers requests with PHP-FPM
+    location ~ ^/(app)\.php(/|$) {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index app.php;
+        fastcgi_split_path_info ^(.+\.php)(/.*)$;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_param SCRIPT_NAME $fastcgi_script_name;
+    }
+
+    # Return 404 for all other PHP files not matching the front controllers
+    location ~ \.php$ {
+        return 404;
+    }
+}
